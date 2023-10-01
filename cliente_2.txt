@@ -1,0 +1,58 @@
+#include <WiFi.h>
+const char * WIFI_SSID = "XRN";
+const char * WIFI_PASS = "joseclp08";
+const char * SERVER_ADDRESS = "192.168.231.124";
+const int SERVER_PORT = 1000; 
+
+const int RED=13;
+const int ORANGE=12;
+const int GREEN=14;
+
+void turnOn(bool redStatus,bool orangeStatus,bool greenStatus){
+  digitalWrite(RED,redStatus);   
+  digitalWrite(ORANGE,orangeStatus);
+  digitalWrite(GREEN,greenStatus);  
+}
+
+void setup(){
+  pinMode(RED,OUTPUT);
+  pinMode(ORANGE,OUTPUT);
+  pinMode(GREEN,OUTPUT);
+  Serial.begin(115200);
+  Serial.print("Connecting to: ");
+  Serial.print(WIFI_SSID);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(200);
+    Serial.print(".");
+  }
+
+  Serial.print("\nIP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop(){
+  WiFiClient client;
+  if (!client.connect(SERVER_ADDRESS, SERVER_PORT)) {
+    Serial.println("Connection failed");
+    turnOn(0,0,0);
+    return;
+  }
+
+  String get = "GET\n";
+  client.print(get.c_str());
+  delay(100);
+  
+  if (client.available() > 0) {
+    String line = client.readStringUntil('\n');
+    turnOn(int(line[0])-48,int(line[1])-48,int(line[2])-48);
+    delay(100);
+  } else {
+    Serial.println("Server timeout.");
+    turnOn(0,0,0);
+  }
+  Serial.println("Closing connection.");
+  client.stop(); 
+  delay(100); 
+}

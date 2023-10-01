@@ -1,0 +1,71 @@
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Threading; 
+
+public class Server
+{
+    private readonly int port;
+    private int distance;
+
+    public Server(int port){
+        this.port = port;
+        distance = 0;
+    }
+
+    public void Start(){
+        TcpListener listener = new TcpListener(IPAddress.Any, port);
+        listener.Start();
+        Console.WriteLine("Server listening on port " + port);
+        while (true){
+            TcpClient client = listener.AcceptTcpClient();
+            Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClient));
+            clientThread.Start(client);
+        }
+    }
+
+    public static void Main(string[] args){
+        Server server = new Server(1000);
+        server.Start();
+    }
+
+    public String getLedPosition(){
+        if (distance >= 20){
+            return "100";
+        }
+        else if (distance <= 10){
+            return "001";
+        }
+        else{
+            return "010";
+        }
+    }
+
+    private void HandleClient(object clientObj){
+        TcpClient client = (TcpClient)clientObj;
+        NetworkStream stream = client.GetStream();
+        StreamReader reader = new StreamReader(stream);
+        StreamWriter writer = new StreamWriter(stream);
+        string line;
+        do{ 
+            line = reader.ReadLine();
+            if (line != null){
+                if (line.StartsWith("SET")){ 
+                    string newLine = line.Substring(4);
+                    distance = Convert.ToInt32(newLine);
+                    Console.WriteLine("SET DISTANCE = " + distance);
+                }
+                else if (line.StartsWith("GET")){
+                    writer.WriteLine(getLedPosition());
+                    writer.Flush();
+                }
+                else{
+                    Console.WriteLine("Command not found! " + line);
+                }
+            }
+        } while (line != null);
+        client.Close();
+    }
+}
